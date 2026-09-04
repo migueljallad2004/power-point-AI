@@ -1392,7 +1392,8 @@ function Brief({
             <p className="mt-3 text-xs leading-5 text-black/52">
               No notes needed. Enter an idea, choose your slide count, and AI
               will research, write, and organize the content. You can review the
-              outline and compare template examples before exporting.
+              outline and compare template examples before exporting. The
+              downloaded PowerPoint includes an Outline slide after the cover.
             </p>
           )}
           {generationMode !== 'research' && (
