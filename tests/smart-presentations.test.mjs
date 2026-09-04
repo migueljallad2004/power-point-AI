@@ -347,7 +347,7 @@ for (const [name, patch] of [
     const complete = Array.from({ length: 10 }, (_, i) => ({
       ...draft[i % 4],
       slideNumber: i + 1,
-      title: `Animals ${i + 1}`,
+      title: i === 1 ? 'Outline' : `Animals ${i + 1}`,
     }));
     let searches = 0,
       generations = 0;
@@ -445,6 +445,56 @@ test('repair preserves provided-only mode and exact slide headings', async () =>
   assert.equal(result.slides[0].title, 'My Animals');
   assert.equal(result.slides[1].title, 'Introduction');
   assert.deepEqual(result.sources, []);
+});
+
+test('research mode repairs a missing outline into slide 2', async () => {
+  let generations = 0;
+  const post = api(async (url, options) => {
+    if (url.endsWith('web_search'))
+      return Response.json({
+        results: [
+          {
+            title: 'Animals',
+            url: 'https://example.org/animals',
+            content: 'Animal evidence.',
+          },
+        ],
+      });
+    generations++;
+    const request = JSON.parse(options.body);
+    assert.match(request.messages[0].content, /slide 2 must be titled/);
+    const slides = draft.map((item, index) => ({
+      ...item,
+      title:
+        generations === 1
+          ? `Animals ${index + 1}`
+          : index === 1
+            ? 'Outline'
+            : `Animals ${index + 1}`,
+      bullets:
+        index === 1 && generations > 1
+          ? ['Habitats', 'Classification', 'Conservation']
+          : item.bullets,
+    }));
+    return Response.json({
+      message: { content: JSON.stringify({ slides }) },
+    });
+  });
+  const response = await post(
+    new Request('http://test/api', {
+      method: 'POST',
+      body: JSON.stringify({ mode: 'research', topic: 'animals', count: 4 }),
+    }),
+  );
+  const result = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(result));
+  assert.equal(generations, 2);
+  assert.equal(result.slides[1].title, 'Outline');
+  assert.deepEqual(result.slides[1].bullets, [
+    'Habitats',
+    'Classification',
+    'Conservation',
+  ]);
 });
 
 test('provider failures do not trigger repeated generation requests', async () => {
